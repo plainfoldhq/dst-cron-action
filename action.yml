@@ -1,0 +1,58 @@
+name: "DST-aware cron and late-run guard"
+description: "Run a scheduled workflow once at the right local time across DST changes, and skip or warn when GitHub starts a scheduled run late."
+author: "Plainfold"
+branding:
+  icon: clock
+  color: gray-dark
+inputs:
+  timezone:
+    description: "IANA zone for the intended local time, e.g. America/Chicago. Leave empty to skip the DST check."
+    required: false
+    default: ""
+  local-hour:
+    description: "Intended local hour (0-23). Required when timezone is set."
+    required: false
+    default: ""
+  schedule:
+    description: "The cron string that fired, normally github.event.schedule. Used by the late-run guard (minute and hour fields must be numbers)."
+    required: false
+    default: ""
+  max-delay-minutes:
+    description: "Late-run guard: a run that started more than this many minutes after its scheduled time counts as late. Empty disables the guard."
+    required: false
+    default: ""
+  on-late:
+    description: "What to do with a late run: skip (run=false) or warn (run=true, warning annotation)."
+    required: false
+    default: "skip"
+  now:
+    description: "Override the current UTC time (ISO 8601, e.g. 2026-03-08T08:00:00Z). For tests and dry runs."
+    required: false
+    default: ""
+outputs:
+  run:
+    description: "'true' if the job should go ahead, 'false' if it should be skipped."
+    value: ${{ steps.check.outputs.run }}
+  reason:
+    description: "Short text explaining the decision."
+    value: ${{ steps.check.outputs.reason }}
+  local-time:
+    description: "Current time in the given timezone (ISO 8601), empty if no timezone."
+    value: ${{ steps.check.outputs.local-time }}
+  delay-minutes:
+    description: "Minutes between the scheduled time and now (late-run guard), empty if not computed."
+    value: ${{ steps.check.outputs.delay-minutes }}
+runs:
+  using: composite
+  steps:
+    - id: check
+      shell: bash
+      env:
+        PF_TIMEZONE: ${{ inputs.timezone }}
+        PF_LOCAL_HOUR: ${{ inputs.local-hour }}
+        PF_SCHEDULE: ${{ inputs.schedule }}
+        PF_MAX_DELAY: ${{ inputs.max-delay-minutes }}
+        PF_ON_LATE: ${{ inputs.on-late }}
+        PF_NOW: ${{ inputs.now }}
+        PF_ACTION_PATH: ${{ github.action_path }}
+      run: python3 "$PF_ACTION_PATH/dst_cron.py"
