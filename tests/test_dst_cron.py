@@ -38,7 +38,13 @@ def zdump_transitions(zone, y0, y1):
         if " UT = " not in line:
             continue
         left = line.split(" UT = ")[0].split(None, 1)[1].strip()
-        res.append(datetime.strptime(left, "%a %b %d %H:%M:%S %Y").replace(tzinfo=timezone.utc))
+        try:
+            t = datetime.strptime(left, "%a %b %d %H:%M:%S %Y").replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue  # sentinel lines some zdump builds print for the min/max time (e.g. year -2147481748)
+        if y0 <= t.year <= y1 + 1:
+            res.append(t)
+    assert res, "zdump printed no transitions for %s" % zone
     return res
 
 
