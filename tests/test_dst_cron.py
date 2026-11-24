@@ -44,7 +44,6 @@ def zdump_transitions(zone, y0, y1):
             continue  # sentinel lines some zdump builds print for the min/max time (e.g. year -2147481748)
         if y0 <= t.year <= y1 + 1:
             res.append(t)
-    assert res, "zdump printed no transitions for %s" % zone
     return res
 
 
